@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Javascript in Browser Code Editor</title>
+        <script src="./codemirror-5.65.19/lib/codemirror.js"></script>
+        <link rel="stylesheet" href="./codemirror-5.65.19/lib/codemirror.css">
+        <link rel="stylesheet" href="./codemirror-5.65.19/addon/hint/show-hint.css">
+        <script src="./codemirror-5.65.19/mode/javascript/javascript.js"></script>
+        <script src="./codemirror-5.65.19/addon/hint/show-hint.js"></script>
+        <script src="./codemirror-5.65.19/addon/hint/javascript-hint.js"></script>
+        <!--script src="./codemirror-5.65.19/addon/hint/anyword-hint.js"></script-->
+    </head>
+    <body>
+        <label for="ln">Toggle Line Numbers</label>
+        <input type="checkbox" id="ln" checked onclick="switchLineNumbers()"/>
+        <textarea id="editor">
+        </textarea>
+        <label for="file">Choose local file to load</label>
+        <input type="file" id="fileInput">
+        <form>
+            <input type="text", id="filename", value="myMirrorFile.js"></input>
+            <input type="submit" id="fileOutput" onclick="downloadFile(document.getElementById('filename').value)" value="Click to Download">
+        </form>
+        <script>
+            // NOTE: this block illustrates custom search and completions
+            // using Ctrl+E. Modify this to do what you want...
+            const snippets = [
+                { text: 'const', displayText: 'const declarations' },
+                { text: 'let', displayText: 'let declarations' },
+                { text: 'var', displayText: 'var declarations' },
+                { text: 'for(let i=0; i< ; i++){}', displayText: 'for loop' },
+            ]
+            // the `snippet()` function populates the custom autocompletions from the array of objects above
+            function snippet(snippets){
+                CodeMirror.showHint(editor, function () {
+                    const cursor = editor.getCursor()
+                    const token = editor.getTokenAt(cursor)
+                    const start = token.start
+                    const end = cursor.ch
+                    const line = cursor.line
+                    const currentWord = token.string
+                    const list = snippets.filter(function (item){
+                        return item.text.indexOf(currentWord) >= 0
+                    })
+                return {list: list.length ? list : snippets,
+                    from: CodeMirror.Pos(line, start),
+                    to: CodeMirror.Pos(line, end)
+                    }
+                }, { completeSingle: false })
+            }
+
+            // setup codemirror editor in browser
+            var textArea = document.getElementById('editor');
+            var config = {
+                    lineNumbers: true,
+                    // extraKeys: {"Ctrl-Space": "autocomplete"},
+                    mode: {name: "javascript", globalVars: true},
+                    tabSize: 4,
+                     // NOTE: here using `Ctrl+Q` for tab key does traditional intellisense completion
+                     // and Ctrl+E does "custom" completion using `snippet()` code above
+                     // you can remap these keys as desired, eg. `Tab` for tab completion
+                     extraKeys: {"Ctrl-Q": "autocomplete", // default is control+space
+                                 "Ctrl-E": function() {snippet(snippets)}
+                                }, 
+                     
+                     hint: CodeMirror.hint.javascript
+                }
+            var editor = CodeMirror.fromTextArea(textArea, config);
+            
+            // "track changes" via console.log...
+            editor.on("change", function(instance, changeObj){
+                // NOTE: the message `msg` is the full text in the textarea editor 
+                let msg = instance.getValue();                
+                console.log(msg)
+                // the change object has character inserts, paste events, etc... 
+                console.log("changeObj->", changeObj);
+                // this is the `document` instance associated with the change...
+                var doc = editor.getDoc();
+                console.log(doc);
+                
+            });
+
+            /* NOTE: if you wanted to look at the tokens added uncomment this
+            editor.on("keyup", function(editor, event){
+                var __Cursor = editor.getDoc().getCursor();
+                var __Token = editor.getTokenAt(__Cursor);
+                console.log("__Token->", __Token);
+                console.log(CodeMirror.commands);
+            });
+            */
+
+            // NOTE: this function toggles line numbers on/off based on a button click
+            function switchLineNumbers(){
+                let editor = this.editor;
+                editor.getOption("lineNumbers") ? editor.setOption("lineNumbers", false) : editor.setOption("lineNumbers", true);
+            }
+            
+            // use this to populate the codemirror editor from a file...
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                    const content = e.target.result;
+                    editor.setValue(content);
+                };
+                reader.onerror = (e) => {
+                  console.error("Error reading file:", e);
+                };
+                reader.readAsText(file);
+                
+              }
+            });
+
+            // use this to download the file in a file named `filename` from the browser
+            // this function creates an anchor tag with a download on click and then clicks
+            // then removes the anchor and the url ...
+            function downloadFile(filename) {
+                text = editor.getValue();
+                const blob = new Blob([text], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        </script>
+        <div>
+            <p>
+                This is one way that you can design the front end of a <a href="https://pastebin.com/">pastebin</a> site or 
+                <a href="https://gist.github.com/">github gist</a> site.
+            </p>
+            <p>
+                Also, if you've used <a href="https://leetcode.com/">leetcode</a> or <a href="https://coderpad.io/">coderpad</a> 
+                this is one way you could implement the client side of the application.
+            </p>
+            <p>I should note that AFAIK <a href="https://github.blog/news-insights/edit-like-an-ace/">Github</a>  using a different editor than code mirror.</p>
+            <p>The base functionality is in both editors is somewhat similar.</p>
+        </div>
+    </body>
+</html>

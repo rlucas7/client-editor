@@ -1,0 +1,1 @@
+console.log("this is an example file of js input to code-mirror editor from a file.")
